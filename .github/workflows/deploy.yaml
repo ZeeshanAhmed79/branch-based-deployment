@@ -1,0 +1,41 @@
+name: branch-based-deployment
+
+on:
+    push:
+        branches:
+            - main
+            - staging
+
+jobs:
+    deploy:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Deploy to Staging EC2
+              if: github.ref == 'refs/heads/staging'
+              uses: appleboy/ssh-action@v1.0.3
+              with:
+                  host: ${{ secrets.STAGING_EC2_HOST }}
+                  username: ${{ secrets.STAGING_EC2_USER }}
+                  key: ${{ secrets.STAGING_EC2_SSH_KEY }}
+                  script: |
+                      cd /home/ubuntu/branch-based-deployment
+                      git pull origin staging
+                      npm install
+                      pm2 restart node-app || pm2 start server.js --name node-app
+
+            - name: Deploy to Production EC2
+              if: github.ref == 'refs/heads/main'
+              uses: appleboy/ssh-action@v1.0.3
+              with:
+                  host: ${{ secrets.PRODUCTION_EC2_HOST }}
+                  username: ${{ secrets.PRODUCTION_EC2_USER }}
+                  key: ${{ secrets.PRODUCTION_EC2_SSH_KEY }}
+                  script: |
+                      cd /home/ubuntu/branch-based-deployment
+                      git pull origin main
+                      npm install
+                      pm2 restart node-app || pm2 start server.js --name node-app
