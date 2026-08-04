@@ -41,7 +41,7 @@ jobs:
             git reset --hard origin/staging
 
             # Install dependencies (production only)
-            npm ci --production
+            npm install --omit=dev
 
             # Set environment variables for the app
             export BRANCH_NAME=staging
@@ -82,7 +82,7 @@ jobs:
             git reset --hard origin/main
 
             # Install dependencies (production only)
-            npm ci --production
+            npm install --omit=dev
 
             # Set environment variables for the app
             export BRANCH_NAME=main
