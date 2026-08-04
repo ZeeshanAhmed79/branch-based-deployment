@@ -35,7 +35,7 @@ jobs:
                   username: ${{ secrets.PROD_EC2_USER }}
                   key: ${{ secrets.PROD_EC2_KEY }}
                   script: |
-                      cd /home/ubuntu/branch-based-deploymen
+                      cd /home/ubuntu/branch-based-deployment
                       git pull origin main
                       npm install
                       pm2 restart node-app || pm2 start server.js --name node-app
