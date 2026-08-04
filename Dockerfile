@@ -12,5 +12,3 @@ COPY . .
 
 # Start app
 CMD ["node", "server.js"]
-
-
