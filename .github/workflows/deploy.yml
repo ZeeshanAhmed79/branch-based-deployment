@@ -1,3 +1,4 @@
+# .github/workflows/deploy.yml
 name: Branch Based Deployment
 
 on:
@@ -11,31 +12,79 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Deploy to Staging EC2
-      if: github.ref == 'refs/heads/staging'
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.STAGING_EC2_HOST }}
-        username: ${{ secrets.STAGING_EC2_USER }}
-        key: ${{ secrets.STAGING_EC2_KEY }}
-        script: |
-          cd /home/ubuntu/branch-based-deployment
-          git pull origin staging
-          npm install
-          pm2 restart node-app || pm2 start server.js --name node-app
+      # ---------- STAGING ----------
+      - name: Deploy to Staging EC2
+        if: github.ref == 'refs/heads/staging'
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.STAGING_EC2_HOST }}
+          username: ${{ secrets.STAGING_EC2_USER }}
+          key: ${{ secrets.STAGING_EC2_KEY }}
+          script: |
+            set -e
 
-    - name: Deploy to Production EC2
-      if: github.ref == 'refs/heads/main'
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.PROD_EC2_HOST }}
-        username: ${{ secrets.PROD_EC2_USER }}
-        key: ${{ secrets.PROD_EC2_KEY }}
-        script: |
-          cd /home/ubuntu/branch-based-deployment
-          git pull origin main
-          npm install
-          pm2 restart node-app || pm2 start server.js --name node-app
+            # Ensure PM2 is available
+            which pm2 || sudo npm install -g pm2
+
+            cd /home/ubuntu/branch-based-deployment
+
+            # Pull latest code
+            git fetch origin
+            git checkout staging
+            git pull origin staging
+
+            # Install dependencies (production only)
+            npm ci --production
+
+            # Set environment variables for the app
+            export BRANCH_NAME=staging
+            export ENVIRONMENT=staging
+
+            # Restart app with PM2
+            pm2 restart node-app || pm2 start server.js --name node-app
+
+            # Give PM2 a moment to start
+            sleep 5
+
+            # Health check
+            curl -f http://localhost:3000/health || (echo "Health check failed" && exit 1)
+
+      # ---------- PRODUCTION ----------
+      - name: Deploy to Production EC2
+        if: github.ref == 'refs/heads/main'
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_EC2_HOST }}
+          username: ${{ secrets.PROD_EC2_USER }}
+          key: ${{ secrets.PROD_EC2_KEY }}
+          script: |
+            set -e
+
+            # Ensure PM2 is available
+            which pm2 || sudo npm install -g pm2
+
+            cd /home/ubuntu/branch-based-deployment
+
+            # Pull latest code
+            git fetch origin
+            git checkout main
+            git pull origin main
+
+            # Install dependencies (production only)
+            npm ci --production
+
+            # Set environment variables for the app
+            export BRANCH_NAME=main
+            export ENVIRONMENT=production
+
+            # Restart app with PM2
+            pm2 restart node-app || pm2 start server.js --name node-app
+
+            # Give PM2 a moment to start
+            sleep 5
+
+            # Health check
+            curl -f http://localhost:3000/health || (echo "Health check failed" && exit 1)
