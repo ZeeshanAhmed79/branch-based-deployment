@@ -31,10 +31,14 @@ jobs:
 
             cd /home/ubuntu/branch-based-deployment
 
-            # Pull latest code
+            # Configure git to avoid divergent-branch errors
+            git config pull.rebase false
+
+            # Fetch and reset to remote staging (discard any local commits)
             git fetch origin
             git checkout staging
-            git pull origin staging
+            git fetch origin staging
+            git reset --hard origin/staging
 
             # Install dependencies (production only)
             npm ci --production
@@ -68,10 +72,14 @@ jobs:
 
             cd /home/ubuntu/branch-based-deployment
 
-            # Pull latest code
+            # Configure git to avoid divergent-branch errors
+            git config pull.rebase false
+
+            # Fetch and reset to remote main (discard any local commits)
             git fetch origin
             git checkout main
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
 
             # Install dependencies (production only)
             npm ci --production
